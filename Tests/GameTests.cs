@@ -15,29 +15,6 @@ namespace Tests
         }
 
         [Fact]
-        public void CanCycleGameOnce()
-        {
-            var seed = new StringBuilder();
-            seed.AppendLine("-----");
-            seed.AppendLine("--1--");
-            seed.AppendLine("--1--");
-            seed.AppendLine("--1--");
-            seed.AppendLine("-----");
-
-            var board = new GameBoard(seed.ToString());
-            board.Cycle();
-
-            var expected = new StringBuilder();
-            expected.AppendLine("-----");
-            expected.AppendLine("-----");
-            expected.AppendLine("-111-");
-            expected.AppendLine("-----");
-            expected.AppendLine("-----");
-
-            board.GetPrintout().Should().Be(expected.ToString().TrimEnd());
-        }
-
-        [Fact]
         public void CountsNoLiveNeighborsFor_0x0_In_1x1_Grid()
         {
             var board = new GameBoard("-");
