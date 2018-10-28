@@ -191,6 +191,11 @@ namespace Tests
 
         public GameBoard(string seedPattern)
         {
+            MapSeedToGrid(ParseSeedString(seedPattern));
+        }
+
+        private static List<List<bool>> ParseSeedString(string seedPattern)
+        {
             var cellLines = new List<List<bool>>();
 
             using (var reader = new StringReader(seedPattern))
@@ -211,6 +216,11 @@ namespace Tests
                 }
             }
 
+            return cellLines;
+        }
+
+        private void MapSeedToGrid(List<List<bool>> cellLines)
+        {
             if (cellLines.GroupBy(c => c.Count).Count() > 1)
                 throw new ArgumentException("Seed must have equal rows");
 
@@ -244,9 +254,7 @@ namespace Tests
                         continue;
 
                     if (iX == x && iY == y)
-                    {
                         continue;
-                    }
 
                     if (grid[iX, iY])
                         liveCount++;
@@ -300,9 +308,7 @@ namespace Tests
             for (int x = grid.GetLowerBound(0); x <= grid.GetUpperBound(0); x++)
             {
                 for (int y = grid.GetLowerBound(0); y <= grid.GetUpperBound(1); y++)
-                {
                     sb.Append(grid[x, y] ? "1" : "-");
-                }
 
                 sb.AppendLine();
             }
