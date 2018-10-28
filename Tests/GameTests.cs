@@ -1,21 +1,11 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Text;
+﻿using System.Text;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
 
 namespace Tests
 {
     public class GameTests
     {
-        private readonly ITestOutputHelper output;
-
-        public GameTests(ITestOutputHelper output)
-        {
-            this.output = output;
-        }
-
         [Fact]
         public void CanCreateGameBoardWithSimpleSeed()
         {
