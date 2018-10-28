@@ -1,117 +1,236 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Xunit;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Tests
 {
     public class GameTests
     {
+        private readonly ITestOutputHelper output;
+
+        public GameTests(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
+        [Fact]
+        public void CanCreateGameBoardWithSimpleSeed()
+        {
+            var board = new GameBoard("0");
+
+            board.GetPrintout().Should().Be("-");
+        }
+
+        [Fact]
+        public void CanCycleGameOnce()
+        {
+            var seed = new StringBuilder();
+            seed.AppendLine("-----");
+            seed.AppendLine("--1--");
+            seed.AppendLine("--1--");
+            seed.AppendLine("--1--");
+            seed.AppendLine("-----");
+
+            var board = new GameBoard(seed.ToString());
+            board.Cycle();
+
+            var expected = new StringBuilder();
+            expected.AppendLine("-----");
+            expected.AppendLine("-----");
+            expected.AppendLine("-111-");
+            expected.AppendLine("-----");
+            expected.AppendLine("-----");
+
+            board.GetPrintout().Should().Be(expected.ToString().TrimEnd());
+        }
+
         [Fact]
         public void CountsNoLiveNeighborsFor_0x0_In_1x1_Grid()
         {
-            var grid = new[,]
-            {
-                {false},
-            };
+            var board = new GameBoard("-");
 
-            CountLiveNeighbors(grid, 0, 0).Should().Be(0);
+            board.CountLiveNeighborsForCellPosition(0, 0).Should().Be(0);
         }
 
         [Fact]
         public void CountsOneLiveNeighborsFor_0x0_In_2x2_Grid()
         {
-            var grid = new[,]
-            {
-                {false,false},
-                {false,true},
-            };
+            var seed = new StringBuilder();
+            seed.AppendLine("--");
+            seed.AppendLine("-1");
+            var board = new GameBoard(seed.ToString());
 
-            CountLiveNeighbors(grid, 0, 0).Should().Be(1);
+            board.CountLiveNeighborsForCellPosition(0, 0).Should().Be(1);
         }
 
         [Fact]
         public void CountsTwoLiveNeighborsFor_0x0_In_2x2_Grid()
         {
-            var grid = new[,]
-            {
-                {false,true},
-                {true,false},
-            };
+            var seed = new StringBuilder();
+            seed.AppendLine("-1");
+            seed.AppendLine("1-");
+            var board = new GameBoard(seed.ToString());
 
-            CountLiveNeighbors(grid, 0, 0).Should().Be(2);
+            board.CountLiveNeighborsForCellPosition(0, 0).Should().Be(2);
         }
 
         [Fact]
         public void CountsTwoLiveNeighborsFor_1x1_In_2x2_Grid()
         {
-            var grid = new[,]
-            {
-                {false,true},
-                {true,false},
-            };
+            var seed = new StringBuilder();
+            seed.AppendLine("-1");
+            seed.AppendLine("1-");
+            var board = new GameBoard(seed.ToString());
 
-            CountLiveNeighbors(grid, 1, 1).Should().Be(2);
+            board.CountLiveNeighborsForCellPosition(1, 1).Should().Be(2);
         }
 
         [Fact]
         public void CountsOneLiveNeighborsFor_1x1_In_2x2_Grid()
         {
-            var grid = new[,]
-            {
-                {true,false},
-                {false,false},
-            };
+            var seed = new StringBuilder();
+            seed.AppendLine("1-");
+            seed.AppendLine("--");
+            var board = new GameBoard(seed.ToString());
 
-            CountLiveNeighbors(grid, 1, 1).Should().Be(1);
+            board.CountLiveNeighborsForCellPosition(1, 1).Should().Be(1);
         }
 
         [Fact]
-        public void AnyLiveCellWithFewerThanTwoLiveNeighborsDies()
+        public void LiveCellWithFewerThanTwoLiveNeighborsDies()
         {
-            var grid = new bool[,]
-            {
-                {false, false, false, false, false},
-                {false, false, true,  false, false},
-                {false, false, true,  false, false},
-                {false, false, true,  false, false},
-                {false, false, false, false, false},
-            };
+            GameBoard.GetNewCellState(true, 0).Should().BeFalse();
+            GameBoard.GetNewCellState(true, 1).Should().BeFalse();
+        }
 
-            var newGrid = (bool[,])grid.Clone();
+        [Fact]
+        public void LiveCellWithTwoOrThreeLiveNeighborsLives()
+        {
+            GameBoard.GetNewCellState(true, 2).Should().BeTrue();
+            GameBoard.GetNewCellState(true, 3).Should().BeTrue();
+        }
 
-            for (int x = grid.GetLowerBound(0); x < grid.GetUpperBound(0); x++)
+        [Fact]
+        public void LiveCellWithMoreThanThreeLiveNeighborsDies()
+        {
+            GameBoard.GetNewCellState(true, 4).Should().BeFalse();
+        }
+
+        [Fact]
+        public void DeadCellWithThreeLiveNeighborsBecomesLive()
+        {
+            GameBoard.GetNewCellState(false, 3).Should().BeTrue();
+        }
+
+        [Fact]
+        public void DeadCellWithoutThreeLiveNeighborsBecomesLive()
+        {
+            GameBoard.GetNewCellState(false, 2).Should().BeFalse();
+            GameBoard.GetNewCellState(false, 4).Should().BeFalse();
+        }
+
+        [Fact]
+        public void BlinkerTest()
+        {
+            var seed = new StringBuilder();
+            seed.AppendLine("-----");
+            seed.AppendLine("--1--");
+            seed.AppendLine("--1--");
+            seed.AppendLine("--1--");
+            seed.AppendLine("-----");
+            var board = new GameBoard(seed.ToString());
+
+            board.Cycle();
+
+            var expected = new StringBuilder();
+            expected.AppendLine("-----");
+            expected.AppendLine("-----");
+            expected.AppendLine("-111-");
+            expected.AppendLine("-----");
+            expected.AppendLine("-----");
+
+            board.GetPrintout().Should().Be(expected.ToString().TrimEnd());
+        }
+
+        [Fact]
+        public void ToadTest()
+        {
+            var seed = new StringBuilder();
+            seed.AppendLine("------");
+            seed.AppendLine("------");
+            seed.AppendLine("--111-");
+            seed.AppendLine("-111--");
+            seed.AppendLine("------");
+            seed.AppendLine("------");
+            var board = new GameBoard(seed.ToString());
+
+            board.Cycle();
+
+            var expected = new StringBuilder();
+            expected.AppendLine("------");
+            expected.AppendLine("---1--");
+            expected.AppendLine("-1--1-");
+            expected.AppendLine("-1--1-");
+            expected.AppendLine("--1---");
+            expected.AppendLine("------");
+
+            board.GetPrintout().Should().Be(expected.ToString().TrimEnd());
+        }
+    }
+
+    public class GameBoard
+    {
+        private bool[,] grid;
+
+        public GameBoard(string seedPattern)
+        {
+            var cellLines = new List<List<bool>>();
+
+            using (var reader = new StringReader(seedPattern))
             {
-                for (int y = grid.GetLowerBound(0); y < grid.GetUpperBound(1); y++)
+                while (true)
                 {
-                    if (!grid[x, y])
+                    string line = reader.ReadLine();
+                    if (line == null)
+                        break;
+
+                    var cellLine = new List<bool>();
+                    foreach (var chr in line)
                     {
-                        continue;
+                        cellLine.Add(chr == '1');
                     }
 
-                    newGrid[x, y] = CountLiveNeighbors(grid, x, y) >= 2;
+                    cellLines.Add(cellLine);
                 }
             }
 
-            newGrid.Should().BeEquivalentTo(new bool[,]
+            if (cellLines.GroupBy(c => c.Count).Count() > 1)
+                throw new ArgumentException("Seed must have equal rows");
+
+            grid = new bool[cellLines.First().Count, cellLines.Count];
+
+            for (var x = 0; x < cellLines.Count; x++)
             {
-                {false, false, false, false, false},
-                {false, false, false,  false, false},
-                {false, false, true,  false, false},
-                {false, false, false,  false, false},
-                {false, false, false, false, false},
-            });
+                for (var y = 0; y < cellLines.First().Count; y++)
+                {
+                    grid[x, y] = cellLines[x][y];
+                }
+            }
         }
 
-        private int CountLiveNeighbors(bool[,] testGrid, int x, int y)
+        public int CountLiveNeighborsForCellPosition(int x, int y)
         {
-            var xUpper = testGrid.GetUpperBound(0);
-            var xLower = testGrid.GetLowerBound(0);
-            var yUpper = testGrid.GetUpperBound(1);
-            var yLower = testGrid.GetLowerBound(1);
+            var xUpper = grid.GetUpperBound(0);
+            var xLower = grid.GetLowerBound(0);
+            var yUpper = grid.GetUpperBound(1);
+            var yLower = grid.GetLowerBound(1);
 
             int liveCount = 0;
             for (int iX = x - 1; iX <= x + 1; iX++)
@@ -129,12 +248,66 @@ namespace Tests
                         continue;
                     }
 
-                    if (testGrid[iX, iY])
+                    if (grid[iX, iY])
                         liveCount++;
                 }
             }
 
             return liveCount;
         }
+
+        public void Cycle()
+        {
+            var newGrid = (bool[,])grid.Clone();
+
+            for (int x = grid.GetLowerBound(0); x <= grid.GetUpperBound(0); x++)
+            {
+                for (int y = grid.GetLowerBound(0); y <= grid.GetUpperBound(1); y++)
+                {
+                    var livingNeighbors = CountLiveNeighborsForCellPosition(x, y);
+                    newGrid[x, y] = GetNewCellState(grid[x, y], livingNeighbors);
+                }
+            }
+
+            grid = newGrid;
+        }
+
+        public static bool GetNewCellState(bool living, int livingNeighbors)
+        {
+            if (living)
+            {
+                if (livingNeighbors < 2)
+                    return false;
+
+                if (livingNeighbors >= 2 && livingNeighbors <= 3)
+                    return true;
+
+                if (livingNeighbors > 3)
+                    return false;
+
+                throw new ArgumentOutOfRangeException($"{nameof(livingNeighbors)} must be positive");
+            }
+
+            if (livingNeighbors == 3)
+                return true;
+
+            return false;
+        }
+
+        public string GetPrintout()
+        {
+            var sb = new StringBuilder();
+            for (int x = grid.GetLowerBound(0); x <= grid.GetUpperBound(0); x++)
+            {
+                for (int y = grid.GetLowerBound(0); y <= grid.GetUpperBound(1); y++)
+                {
+                    sb.Append(grid[x, y] ? "1" : "-");
+                }
+
+                sb.AppendLine();
+            }
+            return sb.ToString().TrimEnd();
+        }
     }
+
 }
